@@ -5,15 +5,14 @@ class EditDevice extends State {
         super("editDevice", netManager);
         this.adminState = adminState;
         this.div.class = "admin";
-
         this.buses = [5, 4, 3, 1];
-        this.devices = this.adminState.getDevices();
         this.deviceTypes = this.adminState.getDeviceTypes();
     }
 
     init() {
         super.init();
 
+        this.devices = this.adminState.getDevices();
         this.device = this.adminState.getEditingDevice();
 
         let innerHTML =
@@ -29,12 +28,11 @@ class EditDevice extends State {
             "   <tr>" +
             "       <td><select id='selectBus'>";
 
-        innerHTML = innerHTML + "<option value='" + this.device.getBus() + "'>" + this.device.getBus() + " </option>";
-
         for (let i = 0; i < this.buses.length; i++) {
             let found = 0;
             for (let j = 0; j < this.devices.length; j++) {
                 if (this.devices[j].getBus() === "" + this.buses[i]) {
+                    if (this.device.getBus() === "" + + this.buses[i]) continue;
                     found = 1;
                     break;
                 }
@@ -91,6 +89,8 @@ class EditDevice extends State {
             // TODO: Add device calibration
             state.sendRequest("POST", "bash-script", "");
         };
+
+        this.getElementInsideContainer(this.getID(), "selectBus").value = this.device.getBus();
     }
 
     deleteDevice(device) {
