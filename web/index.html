@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+        <meta content="utf-8" http-equiv="encoding">
+        <link rel="icon" type="image/png" href="images/favicon.png">
+        <link rel="stylesheet" href="css/index.css">
+        <title>Motorcycle System 1.0</title>
+        <script src="js/StateManager.js"></script>
+        <script src="js/NetManager.js"></script>
+        <script src="js/states/State.js"></script>
+        <script src="js/states/Admin.js"></script>
+        <script src="js/states/Stats.js"></script>
+        <script src="js/config/devices/AddDevice.js"></script>
+        <script src="js/config/devices/EditDevice.js"></script>
+        <script src="js/config/Config.js"></script>
+        <script src="js/objects/CircleChart.js"></script>
+        <script src="js/objects/Device.js"></script>
+    </head>
+    <body bgcolor=000000 topmargin="0" leftmargin="0" bottommargin="0" rightmargin="0" link=00FFFF text=FFFFFF>
+        <script>
+            addEventListener("load", function() {
+                window,scrollTo(0, 1);
+            }, false);
+        </script>
+
+        <div id="mainDiv" align="center" style="position: fixed; width:100%; height:100%">
+            <div align="center" style="width:100%; height:100%; background-position:center top; background-repeat:no-repeat;">
+                <br><br><br><br>
+
+                <noscript>
+                    <br><br>Javascript needed<br><br>
+                </noscript>
+
+                <div style="position:relative;z-index:3;width:300px;height:250px;border-radius: 15px;">
+                    <form action="javascript:submit();">
+                        <br><br><br>
+                        <label>Name:<br>
+                            <input id=loginname name=loginname type=text value="" maxlength=10 style="font-family: Verdana; font-size: 12pt; text-align: center; color: #003399;">
+                        </label>
+                        <br><br><br>
+                        <label>Password:<br>
+                            <input id=loginpass name=loginpass type=password value="" maxlength=20 style="font-family: Verdana; font-size: 12pt; text-align: center; color: #003399;">
+                        </label>
+                        <br><br><br>
+                        <input type="submit" id="bigbutton" value="LOGIN" class="inputButton">
+                        <br><br>
+                        <p id=loginMessage></p>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script>
+
+            let CONFIG_DATA = "";
+
+            String.prototype.code = function() {
+                var hash = 0, i, chr;
+                if (this.length === 0) return hash;
+                for (i = 0; i < this.length; i++) {
+                    chr = this.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + chr;
+                    hash |= 0;
+                }
+                return hash;
+            }
+
+            function create_http_exchange() {
+                let http_exchange;
+                if (window.XMLHttpRequest) http_exchange = new XMLHttpRequest();
+                else http_exchange = new ActiveXObject("Microsoft.XMLHTTP");
+                return http_exchange;
+            }
+
+            function send_request(http_exchange, type, message, content) {
+                http_exchange.open(type, message);
+                http_exchange.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+                http_exchange.send(content);
+            }
+
+            function submit() {
+                document.getElementById("loginMessage").style.color = "#FFFFFF";
+
+                const http_exchange = create_http_exchange();
+
+                check_state(http_exchange);
+
+                document.getElementById("bigbutton").style.visibility="hidden";
+                send_request(http_exchange, "POST", "login", "loginname=" + document.getElementById("loginname").value + ";loginpass=" +
+                        document.getElementById("loginpass").value.code().toString());
+                document.getElementById("loginMessage").innerHTML = "Connecting...";
+            }
+
+            function check_state(http_exchange) {
+                http_exchange.onreadystatechange = function() {
+                    switch(http_exchange.readyState) {
+                        case 3:
+                            document.getElementById("loginMessage").innerHTML = "Loading...";
+                            break;
+                        case 4:
+                            if (http_exchange.status === 200) process(http_exchange.responseText);
+                            break;
+                    }
+                }
+            }
+
+            function process(http_response_text) {
+                const parts = http_response_text.split("@");
+
+                if (parts[0] === "N") {
+                    document.getElementById("loginMessage").style.color = "#FF0000";
+                    if (parts[1] === "0") document.getElementById("loginMessage").innerHTML = "Username is incorrect!";
+                    else if (parts[1] === "1") document.getElementById("loginMessage").innerHTML = "Password is incorrect!";
+                    else if (parts[2] === "2") document.getElementById("loginMessage").innerHTML = "User does not exist!";
+
+                    document.getElementById("loginpass").value="";
+                    document.getElementById("bigbutton").style.visibility="visible";
+                } else {
+                    document.getElementById("loginMessage").style.color = "#000000";
+                    const username = document.getElementById("loginname").value;
+                    document.getElementById("mainDiv").innerHTML = parts[1];
+                    document.getElementById("welcome").innerHTML = "Welcome " + username + "!";
+
+                    CONFIG_DATA = parts[3];
+
+                    if (window.exec) exec(parts[2]);
+                    else eval(parts[2]);
+                }
+            }
+
+        </script>
+
+    </body>
+</html>

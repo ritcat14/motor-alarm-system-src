@@ -1,0 +1,13 @@
+<component name="ArtifactManager">
+  <artifact build-on-make="true" name="motor-system-server:zip">
+    <output-path>$USER_HOME$/git/motor-alarm-system/project/server</output-path>
+    <root id="root">
+      <element id="archive" name="motor-system-server.zip">
+        <element id="directory" name="web">
+          <element id="dir-copy" path="$PROJECT_DIR$/web" />
+        </element>
+        <element id="artifact" artifact-name="motor-system-server:jar" />
+      </element>
+    </root>
+  </artifact>
+</component>
