@@ -84,12 +84,12 @@ class EditDevice extends State {
             state.requestStateChange("admin");
         };
         this.getElementInsideContainer(this.getID(), "detectDevice").onclick = function() {
-            admin.netManager.sendRequest("POST", "bash-script",
+            state.sendRequest("POST", "bash-script",
                 "/home/pi/project/sensor/detect_device.sh " + document.getElementById("selectBus").value);
         };
         this.getElementInsideContainer(this.getID(), "calibrateDevice").onclick = function () {
             // TODO: Add device calibration
-            admin.netManager.sendRequest("POST", "bash-script", "");
+            state.sendRequest("POST", "bash-script", "");
         };
     }
 

@@ -7,11 +7,14 @@ class State {
         this.netManager = netManager;
     }
 
-    init() {
-        this.netManager.onResponse = this.onResponse;
-    }
+    init() {}
 
     update() {}
+
+    sendRequest(type, heading, content) {
+        console.log("State " + this.getID() + " sending request...")
+        this.netManager.sendRequest(type, this.getID() + "/" + heading, content);
+    }
 
     onResponse(http_text_exchange) {
         console.log("Admin state on response: " + http_text_exchange);

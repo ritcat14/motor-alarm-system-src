@@ -8,7 +8,7 @@ class Config {
 
     updateConfig() {
         // Send POST request to server to save config
-        this.netManager.sendRequest("POST", "update-config", this.dataToString());
+        this.netManager.sendRequest("POST", "admin/update-config", this.dataToString());
     }
 
     dataToString() {
@@ -88,9 +88,14 @@ class Config {
         return this.data;
     }
 
+    setData(data) {
+        this.data = data;
+    }
+
     onResponse(http_text_exchange) {
         if (http_text_exchange.includes("updated-config")) {
-            let parts = http_text_exchange.substr()
+            let data = http_text_exchange.substr(15, http_text_exchange.length - 15);
+            this.setData(data.split("\n"));
         }
     }
 

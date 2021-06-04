@@ -23,12 +23,13 @@ class Stats extends State {
 
         for (i = 0; i < 3; i++) {
             this.circleCharts[i] = new CircleChart(i, 80, 100, '#92DD86', '#8ABDEC',
-                units[i], 'white', labels[i]);
+                units[i], 'white', labels[i], this);
         }
     }
 
     update() {
-        this.netManager.sendRequest("GET", "data", "test");
+        console.log("Stats updating...");
+        this.sendRequest("GET", "data", "test");
     }
 
     onResponse(http_text_exchange) {

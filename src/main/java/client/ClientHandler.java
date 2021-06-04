@@ -34,8 +34,11 @@ public class ClientHandler implements HttpHandler {
                     sendResponse(exchange, fileData, parts[parts.length - 1], 200);
 
                 } else if (URI.endsWith("data")) {
+                    String stateName = URI.split("/")[2];
                     // read all data from file and return it to client
                     byte[] statsData = readFileFromWeb("/web/database/sensorData.txt");
+                    statsData = (stateName + ":" + new String(statsData)).getBytes();
+                    System.out.println("Data returned:" + new String(statsData));
                     sendResponse(exchange, statsData, "data", 200);
 
                 } else {
@@ -73,19 +76,22 @@ public class ClientHandler implements HttpHandler {
                     StringBuilder payload = new StringBuilder();
                     while (in.ready()) payload.append((char) in.read());
 
-                    String stateName = URI.split(":")[0];
-                    System.out.println(stateName);
+                    String stateName = URI.split(":")[2];
 
                     String scriptFile = payload.toString();
 
                     System.out.println("    Payload:" + scriptFile);
 
-                    sendResponse(exchange, ("script-value:" + scriptFile + ":" + executeBashScript(scriptFile)).getBytes(), "text/html", 200);
+                    String response = stateName + (":script-value:" + scriptFile + ":" + executeBashScript(scriptFile));
+
+                    sendResponse(exchange, response.getBytes(), "text/html", 200);
 
                 } else if (URI.contains("update-password")) {
                     BufferedReader in = new BufferedReader(new InputStreamReader(exchange.getRequestBody()));
                     StringBuilder payload = new StringBuilder();
                     while (in.ready()) payload.append((char) in.read());
+
+                    String stateName = URI.split(":")[2];
 
                     String[] passes = payload.toString().split("[;]");
 
@@ -97,7 +103,10 @@ public class ClientHandler implements HttpHandler {
                     if (success == LOGIN_SUCCESS) result = "Password successfully changed!";
                     else if (success == PASSWORD_WRONG) result = "Current password is incorrect!";
                     else result = "Password could not be updated. Please consult tech support!";
-                    sendResponse(exchange, ("password-changed:" + result).getBytes(), "text/html", 200);
+
+                    String response = stateName + (":password-changed:" + result);
+
+                    sendResponse(exchange, response.getBytes(), "text/html", 200);
 
                 } else if (URI.contains("update-config")) {
                     System.err.println("Updating config!");
@@ -114,7 +123,7 @@ public class ClientHandler implements HttpHandler {
                     byte[] fileData = readFileFromWeb("web/database/" + USERNAME + ".conf");
                     String fileStringData = new String(fileData);
 
-                    sendResponse(exchange, ("updated-config:" + fileStringData).getBytes(), "text/html", 200);
+                    sendResponse(exchange, ("admin:updated-config:" + fileStringData).getBytes(), "text/html", 200);
                 }
                 else {
                     byte[] fileData = Handler.readFileFromWeb(METHOD_NOT_SUPPORTED);

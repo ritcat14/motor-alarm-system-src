@@ -6,6 +6,10 @@ class StateManager {
         this.currentStateID = this.currentState.getID();
         this.setState(states[0].getID());
         this.netManager = netManager;
+        let SM = this;
+        this.netManager.onResponse = function (http_text) {
+            SM.onResponse(http_text);
+        }
     }
 
     addState(state) {
@@ -44,9 +48,26 @@ class StateManager {
         }
     }
 
+    getState(stateName) {
+        for (let i = 0; i < this.states.length; i++) {
+            if (this.states[i].getID() === stateName) return this.states[i];
+        }
+        return null;
+    }
+
     onResponse(http_text_response) {
-        console.log(http_text_response);
-        this.currentState.onResponse(http_text_response);
+        // Split message into parts and extract destination state name
+        let message_parts = http_text_response.split(":");
+        let dest_state_name = message_parts[0];
+        // Get the actual state
+        let dest_state = this.getState(dest_state_name.trim());
+        // Forward the response to the appropriate state if found
+        if (dest_state !== null) {
+            let newMessage = "";
+            for (let i = 1; i < message_parts.length; i++) newMessage = newMessage + message_parts[i] + ":"; // Recreate the message without the signature
+            newMessage = newMessage.substr(0, newMessage.length - 1); // Remove last ":"
+            dest_state.onResponse(newMessage); // Send new message
+        }
     }
 
 }

@@ -132,7 +132,7 @@ class Admin extends State {
         // Verify passwords match
         if (newPass === newVerifyPass) {
             // Send request to server to verify update
-            this.netManager.sendRequest("POST", "update-password", currPass + ";" + newPass);
+            super.sendRequest("POST", "update-password", currPass + ";" + newPass);
             message.innerHTML = "Updating...";
             message.style = "color: #FFFFFF;";
         } else {
@@ -171,7 +171,7 @@ class Admin extends State {
                 message.style = "color: #00FF00;";
                 history.go(0);
             }
-        }
+        } else this.config.onResponse(http_text_exchange);
     }
 
     getDevices() {

@@ -74,6 +74,7 @@
             }
 
             function send_request(http_exchange, type, message, content) {
+                console.log("Request being sent...");
                 http_exchange.open(type, message);
                 http_exchange.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
                 http_exchange.send(content);

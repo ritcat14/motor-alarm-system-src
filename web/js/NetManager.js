@@ -21,6 +21,7 @@ class NetManager {
     }
 
     sendRequest(type, heading, content) {
+        console.log("NetManager sending request:\n" + "TYPE:" + type + "\nHEADING:" + heading + "\nCONTENT:" + content);
         send_request(this.http_exchange, type, heading, content);
     }
 
