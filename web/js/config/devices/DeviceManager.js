@@ -1,13 +1,13 @@
 
-class AddDevice extends State {
+class DeviceManager extends State {
 
-    constructor(netManager, adminState) {
-        super("addDevice", netManager);
+    constructor(stateName, netManager, adminState) {
+        super(stateName, netManager);
         this.div.class = "admin";
         this.adminState = adminState;
         this.buses = [5,4,3,1];
-        this.devices = adminState.getDevices();
         this.deviceTypes = adminState.getDeviceTypes();
+        this.isEditing = (stateName.includes("edit"));
     }
 
     init() {
@@ -22,7 +22,11 @@ class AddDevice extends State {
             "    <th>Bus</th>\n" +
             "    <th>Type</th>\n" +
             "    <th>Detect</th>\n " +
-            "    <th>Calibrate</th>\n " +
+            "    <th>Calibrate</th>\n ";
+
+        if (this.isEditing) innerHTML = innerHTML + "<th>Delete</th>"
+
+        innerHTML = innerHTML +
             "  </tr>" +
             "  <tr>" +
             "    <td>" +
@@ -32,6 +36,7 @@ class AddDevice extends State {
             let found = 0;
             for (let j = 0; j < this.devices.length; j++) {
                 if (this.devices[j].getBus() === "" + this.buses[i]) {
+                    if (this.isEditing && this.adminState.editingDevice.getBus() === "" + this.buses[i]) continue;
                     found = 1;
                     break;
                 }
@@ -53,33 +58,50 @@ class AddDevice extends State {
             "        </select>" +
             "</td>" +
             "    <td><button id='detectDevice'>DETECT</button><br><br><label id='detectLabel' style='color: red;'>UNDETECTED</label></td>" +
-            "    <td><button id='calibrateDevice'>CALIBRATE</button><br><br><label id='calibrationLabel'>Current calibration: N/A</label></td>" +
+            "    <td><button id='calibrateDevice'>CALIBRATE</button><br><br><label id='calibrationLabel'>Current calibration: N/A</label></td>";
+
+        if (this.isEditing) innerHTML = innerHTML + "<td><button id='deleteDevice'>DELETE</button></td>";
+
+        innerHTML = innerHTML +
             "  </tr>" +
             "  <tr>" +
             "    <td></td>" +
             "    <td><button id='closeAddDevice' class='passbutton'>CLOSE</button></td>\n " +
             "    <td><button id='saveAddDevice' class='passbutton'>SAVE</button></td>\n " +
-            "    <td></td>" +
+            "    <td></td>";
+
+        if (this.isEditing) innerHTML = innerHTML + "<td></td>";
+
+        innerHTML = innerHTML +
             "  </tr>" +
             "</table>";
 
         this.div.innerHTML = innerHTML;
 
-        let admin = this;
+        let state = this;
         this.getElementInsideContainer(this.getID(), "closeAddDevice").onclick = function () {
-            admin.requestStateChange("admin");
+            state.requestStateChange("admin");
         };
         this.getElementInsideContainer(this.getID(), "saveAddDevice").onclick = function () {
-            admin.saveAddDevice();
+            state.saveAddDevice();
         };
         this.getElementInsideContainer(this.getID(), "detectDevice").onclick = function() {
-            admin.sendRequest("POST", "bash-script",
+            state.sendRequest("POST", "bash-script",
                 "/home/pi/project/sensor/detect_device.sh " + document.getElementById("selectBus").value);
         };
         this.getElementInsideContainer(this.getID(), "calibrateDevice").onclick = function () {
             // TODO: Add device calibration
-            admin.sendRequest("POST", "bash-script", "");
+            state.sendRequest("POST", "bash-script", "");
         };
+
+        if (this.isEditing) {
+            this.getElementInsideContainer(this.getID(), "deleteDevice").onclick = function () {
+                state.adminState.removeDevice();
+                state.requestStateChange("admin");
+            };
+            this.getElementInsideContainer(this.getID(), "selectType").value = this.adminState.editingDevice.getType();
+        }
+
     }
 
     onResponse(http_text_exchange) {
@@ -92,17 +114,13 @@ class AddDevice extends State {
     }
 
     saveAddDevice() {
-        let index = 0;
-        if (this.devices.length > 0) index = this.devices.length;
-
         let selectBus = document.getElementById("selectBus");
         let selectType = document.getElementById("selectType");
 
         let device = new Device(selectBus.value, selectType.value, false);
 
-        this.devices[index] = device;
-
-        this.adminState.addDevice(device);
+        if (this.isEditing) this.adminState.updateDevice(device);
+        else this.adminState.addDevice(device);
 
         this.requestStateChange("admin");
     }

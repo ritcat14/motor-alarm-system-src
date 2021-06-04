@@ -9,6 +9,8 @@ import static client.Handler.*;
 
 public class ClientHandler implements HttpHandler {
 
+    private static String[] config_template = { "user:", "devices:", "schedules:"};
+
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         String method, URI;
@@ -67,6 +69,10 @@ public class ClientHandler implements HttpHandler {
 
                         // Create user configuration file
                         if (!createFile("web/database/" + USERNAME + ".conf")) System.err.println("User config already exists, aborting create!");
+                        else {
+                            config_template[0] = "user:" + USERNAME;
+                            writeToWebFile("web/database/" + USERNAME + ".conf", config_template);
+                        }
                     }
 
                     sendResponse(exchange, verifyLogin(loginCode), "authentication", 200);

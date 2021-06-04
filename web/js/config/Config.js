@@ -6,19 +6,7 @@ class Config {
         this.data = data.split("\n");
     }
 
-    updateConfig() {
-        // Send POST request to server to save config
-        this.netManager.sendRequest("POST", "admin/update-config", this.dataToString());
-    }
-
-    dataToString() {
-        let result = "";
-        for (let i = 0; i < this.data.length; i++) {
-            if (result !== "" || result !== " ") result = result + this.data[i] + ";";
-        }
-        result = result.endsWith(";") ? result.substr(0, result.length - 1) : result;
-        return result;
-    }
+    // Devices
 
     removeDevice(device) {
         let deviceData = this.getAttributeData("devices");
@@ -61,11 +49,80 @@ class Config {
         this.modifyAttribute("devices", newData);
     }
 
+    // Schedules
+
+    removeSchedule(schedule) {
+        let scheduleData = this.getAttributeData("schedules");
+        let dataParts = scheduleData.split("*");
+        let newData = "";
+
+        for (let i = 0; i < dataParts.length; i++) {
+            let currentID = dataParts[i].split("|")[0];
+            if (currentID !== schedule.getID()) newData = newData + dataParts[i] + "*";
+        }
+
+        newData = newData.endsWith("*") ? newData.substr(0, newData.length - 1) : newData;
+        this.modifyAttribute("schedules", newData);
+    }
+
+    addSchedule(schedule) {
+        let scheduleData = this.getAttributeData("schedules");
+        let newData = schedule.getStringData();
+
+        scheduleData = scheduleData + "*" + newData;
+        scheduleData = scheduleData.startsWith("*") ? scheduleData.substr(1, scheduleData.length - 1) : scheduleData;
+
+        this.modifyAttribute("schedules", scheduleData);
+    }
+
+    updateSchedule(oldSchedule, newSchedule) {
+        let scheduleData = this.getAttributeData("schedules");
+        let dataParts = scheduleData.split("*");
+        let newData = "";
+
+        for (let i = 0; i < dataParts.length; i++) {
+            let currentID = dataParts[i].split("|")[0];
+            if (currentID !== oldSchedule.getID()) newData = newData + dataParts[i] + "*";
+            else { // Old schedule found in config, so update to new device data
+                console.log("Updated schedule data:" + newSchedule.getStringData());
+                newData = newData + newSchedule.getStringData() + "*";
+            }
+        }
+
+        newData = newData.endsWith("*") ? newData.substr(0, newData.length - 1) : newData;
+        this.modifyAttribute("schedules", newData);
+    }
+
+    // Config editing
+
+    updateConfig() {
+        // Send POST request to server to save config
+        this.netManager.sendRequest("POST", "admin/update-config", this.dataToString());
+    }
+
+    dataToString() {
+        let result = "";
+        for (let i = 0; i < this.data.length; i++) {
+            if (result !== "" || result !== " ") result = result + this.data[i] + ";";
+        }
+        result = result.endsWith(";") ? result.substr(0, result.length - 1) : result;
+        return result;
+    }
+
     getAttributeData(attributeName) {
         let result = "";
         for (let i = 0; i < this.data.length; i++) {
-            let attribute = this.data[i].split(":")[0];
-            let data = this.data[i].split(":")[1];
+            let dataParts = this.data[i].split(":");
+
+            let attribute = dataParts[0];
+            let data = dataParts[1];
+
+            if (dataParts.length > 2) {
+                for (let i = 2; i < dataParts.length; i++) {
+                    data = data + ":" + dataParts[i];
+                }
+            }
+
             if (attribute === attributeName) {
                 result = data;
                 break;

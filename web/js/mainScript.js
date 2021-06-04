@@ -65,8 +65,9 @@ function init() {
 
     let adminState;
 
-    let states = [ adminState = new Admin(netManager, config) , new Stats(netManager), new AddDevice(netManager, adminState),
-        new EditDevice(netManager, adminState)];
+    let states = [ adminState = new Admin(netManager, config) , new Stats(netManager), new DeviceManager("addDevice", netManager, adminState),
+        new DeviceManager("editDevice", netManager, adminState), new ScheduleManager("addSchedule", netManager, adminState),
+        new ScheduleManager("editSchedule", netManager, adminState)];
     stateManager = new StateManager(netManager, states);
     stateManager.setState("admin");
 }

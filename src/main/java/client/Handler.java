@@ -99,7 +99,7 @@ public abstract class Handler {
     public static synchronized boolean createFile(String file) throws IOException {
         synchronized (WEB_ROOT) {
             File file1 = new File(WEB_ROOT, file);
-            return (!file1.createNewFile());
+            return (file1.createNewFile());
         }
     }
 
