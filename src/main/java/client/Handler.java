@@ -1,8 +1,14 @@
 package client;
 
+import system.AlarmSystem;
+
 import javax.script.*;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -33,7 +39,13 @@ public abstract class Handler {
     public static final File WEB_ROOT = new File(".");
     public static final String METHOD_NOT_SUPPORTED = "not_supported.html";
     public static final String FILE_NOT_FOUND = "web/404.html";
-    public static String USERNAME;
+    public static final String USERNAME = "admin";
+
+    // FILE PRIVATES
+    private static final List<String> mainScriptData = new ArrayList<>();
+
+    // System
+    public static final AlarmSystem ALARM_SYSTEM = new AlarmSystem();
 
     /*
             INIT
@@ -52,6 +64,56 @@ public abstract class Handler {
             }
         }
         scriptContext.setWriter(scriptWriter);
+
+        createMainScript();
+    }
+
+    private static synchronized void createMainScript() throws IOException {
+        synchronized (WEB_ROOT) {
+            mainScriptData.clear();
+            readJavascriptFilesToList(new File(WEB_ROOT, "web/js/"));
+            mainScriptData.add(new String(readFileFromWeb("web/js/main.js"))); // Add main script at bottom of new file
+
+            // Add State.js to beginning of script
+            List<String> tempList = new ArrayList<>();
+            tempList.add(new String(readFileFromWeb("web/js/states/State.js")));
+            tempList.addAll(mainScriptData);
+            mainScriptData.clear();
+            mainScriptData.addAll(tempList);
+
+            File scriptFile = new File(WEB_ROOT, "web/js/mainScript.js");
+            boolean deleteResult = Files.deleteIfExists(scriptFile.toPath()); // Delete file if it exists
+
+            System.out.println("Main script file deleted:" + deleteResult);
+
+            boolean created = createFile("web/js/mainScript.js");
+            if (created) System.out.println("File mainScript.js created as it did not exist!");
+
+            String[] allFileData = new String[mainScriptData.size()];
+            for (int i = 0; i < mainScriptData.size(); i++) allFileData[i] = mainScriptData.get(i);
+
+            writeToWebFile("web/js/mainScript.js", allFileData);
+        }
+    }
+
+    private static synchronized void readJavascriptFilesToList(File dir) throws IOException {
+        synchronized (WEB_ROOT) {
+            File[] files = dir.listFiles();
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    readJavascriptFilesToList(file);
+                } else {
+                    String filePath = file.getCanonicalPath();
+                    // Skip adding main script (added at END) and mainScript (if file is already generated)
+                    // Also skip State.js as needs to be loaded BEFORE anything else!
+                    if (filePath.contains("main.js") || filePath.contains("mainScript.js") ||
+                            filePath.contains("State.js")) continue;
+                    byte[] data = readFileData(file, (int) file.length());
+                    String stringData = new String(data);
+                    mainScriptData.add(stringData);
+                }
+            }
+        }
     }
 
     public static synchronized void updateDatabase() throws IOException {
@@ -128,23 +190,12 @@ public abstract class Handler {
     }
 
     /*
-            PYTHON
+            BASH
      */
-
-    public static void executePythonScript(String pythonScript) {
-        try {
-            scriptEngine.eval(new BufferedReader(new InputStreamReader(Handler.class.getResourceAsStream(pythonScript))), scriptContext);
-            assertEquals("Should contain script output: ", "Hello!", scriptWriter.toString().trim());
-        } catch (ScriptException e) {
-            e.printStackTrace();
-            System.err.println("ERROR: Failed to execute python script " + pythonScript + "!");
-            System.exit(-1);
-        }
-    }
 
     public static boolean executeBashScript(String scriptFile) {
         try {
-            ProcessBuilder processBuilder = new ProcessBuilder("bash", scriptFile);
+            ProcessBuilder processBuilder = new ProcessBuilder("/bin/bash", "-c", scriptFile);
             Process process = processBuilder.start();
             process.waitFor();
             return process.exitValue() == 0;
@@ -164,6 +215,9 @@ public abstract class Handler {
         String result = "";
 
         if (loginCode == LOGIN_SUCCESS) {
+            // generate mainScript.js prior to reading, to load any script updates
+            createMainScript();
+
             String fileData = new String(readFileFromWeb("web/mainPage.html"));
             String scriptData = new String(readFileFromWeb("web/js/mainScript.js"));
             String configData = new String(readFileFromWeb("web/database/" + USERNAME + ".conf"));
@@ -174,7 +228,7 @@ public abstract class Handler {
         return result.getBytes();
     }
 
-    public static synchronized int getLoginCode(String username, String password) throws IOException {
+    public static synchronized int getLoginCode(String username, String password) {
         synchronized (users) {
             if (username.equals("") || username.equals(" ")) return USERNAME_WRONG;
             if (password.equals("") || password.equals(" ")) return PASSWORD_WRONG;

@@ -9,14 +9,14 @@ import static client.Handler.*;
 
 public class ClientHandler implements HttpHandler {
 
-    private static String[] config_template = { "user:", "devices:", "schedules:"};
+    private static String[] config_template = { "user:", "devices:", "schedules:", "phone:" };
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         String method, URI;
-        System.out.println("Request processing");
-        System.out.println("    URI:" + (URI = exchange.getRequestURI().toString()));
-        System.out.println("    METHOD:" + (method = exchange.getRequestMethod()));
+
+        URI = exchange.getRequestURI().toString();
+        method = exchange.getRequestMethod();
 
         try {
             if (!method.equals("GET") && !method.equals("POST")) {
@@ -26,36 +26,51 @@ public class ClientHandler implements HttpHandler {
                 byte[] fileData = Handler.readFileFromWeb(METHOD_NOT_SUPPORTED);
                 sendResponse(exchange, fileData, "text/html",501);
 
-            } else if (method.equals("GET")) { // GET
+            }
+            else if (method.equals("GET")) { // GET
 
                 if (URI.contains(".html") || URI.contains(".png") || URI.contains(".jpg") || URI.contains(".css") ||
-                        URI.contains(".js")) {
+                        URI.contains(".js") || URI.contains(".vlc")) {
 
                     byte[] fileData = readFileFromWeb(URI);
                     String[] parts = URI.split("[.]");
                     sendResponse(exchange, fileData, parts[parts.length - 1], 200);
 
-                } else if (URI.endsWith("data")) {
+                }
+                else if (URI.endsWith("data")) {
                     String stateName = URI.split("/")[2];
                     // read all data from file and return it to client
                     byte[] statsData = readFileFromWeb("/web/database/sensorData.txt");
                     statsData = (stateName + ":" + new String(statsData)).getBytes();
-                    System.out.println("Data returned:" + new String(statsData));
+
                     sendResponse(exchange, statsData, "data", 200);
 
-                } else {
+                }
+                else if (URI.contains("fileCheck")) {
+                    BufferedReader in = new BufferedReader(new InputStreamReader(exchange.getRequestBody()));
+                    StringBuilder payload = new StringBuilder();
+                    while (in.ready()) payload.append((char) in.read());
+
+                    System.err.println("New URI:" + URI);
+                    String stateName = URI.split("/")[2];
+                    System.err.println("Requested State:" + stateName);
+                    File file = new File(URI.split(":")[1]);
+                    String fileName = URI.split(":")[1].split("/")[6];
+                    String result = stateName + ":" + fileName + ":" + (file.exists());
+                    sendResponse(exchange, result.getBytes(), "text/html", 200);
+                }
+                else {
                     byte[] fileData = Handler.readFileFromWeb(METHOD_NOT_SUPPORTED);
                     sendResponse(exchange, fileData, "text/html", 501);
                 }
 
-            } else { // POST
+            }
+            else { // POST
 
                 if (URI.contains("login")) { // we are processing login request
                     BufferedReader in = new BufferedReader(new InputStreamReader(exchange.getRequestBody()));
                     StringBuilder payload = new StringBuilder();
                     while (in.ready()) payload.append((char) in.read());
-
-                    System.out.println("    Payload:" + payload.toString());
 
                     String[] payloadParts = payload.toString().split("[;]");
 
@@ -65,7 +80,6 @@ public class ClientHandler implements HttpHandler {
                     int loginCode = getLoginCode(userParts[1], passParts[1]);
 
                     if (loginCode == LOGIN_SUCCESS) {
-                        USERNAME = userParts[1].toLowerCase();
 
                         // Create user configuration file
                         if (!createFile("web/database/" + USERNAME + ".conf")) System.err.println("User config already exists, aborting create!");
@@ -77,27 +91,30 @@ public class ClientHandler implements HttpHandler {
 
                     sendResponse(exchange, verifyLogin(loginCode), "authentication", 200);
 
-                } else if (URI.contains("bash-script")) {
+                }
+                else if (URI.contains("script")) {
+                    System.out.println("Executing script");
                     BufferedReader in = new BufferedReader(new InputStreamReader(exchange.getRequestBody()));
                     StringBuilder payload = new StringBuilder();
                     while (in.ready()) payload.append((char) in.read());
 
-                    String stateName = URI.split(":")[2];
+                    String stateName = URI.split("/")[2];
 
                     String scriptFile = payload.toString();
 
-                    System.out.println("    Payload:" + scriptFile);
+                    System.out.println("    Script execution request:" + scriptFile);
 
                     String response = stateName + (":script-value:" + scriptFile + ":" + executeBashScript(scriptFile));
 
                     sendResponse(exchange, response.getBytes(), "text/html", 200);
 
-                } else if (URI.contains("update-password")) {
+                }
+                else if (URI.contains("update-password")) {
                     BufferedReader in = new BufferedReader(new InputStreamReader(exchange.getRequestBody()));
                     StringBuilder payload = new StringBuilder();
                     while (in.ready()) payload.append((char) in.read());
 
-                    String stateName = URI.split(":")[2];
+                    String stateName = URI.split("/")[2];
 
                     String[] passes = payload.toString().split("[;]");
 
@@ -114,15 +131,13 @@ public class ClientHandler implements HttpHandler {
 
                     sendResponse(exchange, response.getBytes(), "text/html", 200);
 
-                } else if (URI.contains("update-config")) {
-                    System.err.println("Updating config!");
+                }
+                else if (URI.contains("update-config")) {
                     BufferedReader in = new BufferedReader(new InputStreamReader(exchange.getRequestBody()));
                     StringBuilder payload = new StringBuilder();
                     while (in.ready()) payload.append((char) in.read());
 
                     String data = payload.toString();
-
-                    System.err.println("Payload:" + data);
 
                     writeToWebFile("web/database/" + USERNAME + ".conf", data.split(";"));
 
@@ -143,12 +158,6 @@ public class ClientHandler implements HttpHandler {
                 System.err.println("Error with file not found exception : " + ioe.getMessage());
             }
         }
-    }
-
-    private boolean connectToDevice() {
-        boolean connected = false;
-
-        return connected;
     }
 
     public void sendResponse(HttpExchange exchange, byte[] data, String type, int code) throws IOException {

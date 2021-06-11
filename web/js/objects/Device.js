@@ -1,14 +1,18 @@
 
 class Device {
 
-    constructor(busID, type, active) {
+    constructor(busID, type, threshold) {
         this.busID = busID;
         this.deviceType = type;
-        this.isActive = active;
+        this.threshold = threshold;
     }
 
     getStringData() {
-        return this.getBus() + "|" + this.getType() + "|" + this.getActive();
+        return this.getBus() + "|" + this.getType() + "|" + this.getThreshold();
+    }
+
+    getThreshold() {
+        return this.threshold;
     }
 
     getBus() {
@@ -17,10 +21,6 @@ class Device {
 
     getType() {
         return this.deviceType;
-    }
-
-    getActive() {
-        return this.isActive;
     }
 
 }

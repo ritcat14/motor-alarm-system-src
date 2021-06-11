@@ -21,6 +21,7 @@ class DeviceManager extends State {
             "  <tr>\n" +
             "    <th>Bus</th>\n" +
             "    <th>Type</th>\n" +
+            "    <th>Threshold</th>\n" +
             "    <th>Detect</th>\n " +
             "    <th>Calibrate</th>\n ";
 
@@ -57,6 +58,7 @@ class DeviceManager extends State {
         innerHTML = innerHTML +
             "        </select>" +
             "</td>" +
+            "    <td><input id='thresholdInput' value=''></td>" +
             "    <td><button id='detectDevice'>DETECT</button><br><br><label id='detectLabel' style='color: red;'>UNDETECTED</label></td>" +
             "    <td><button id='calibrateDevice'>CALIBRATE</button><br><br><label id='calibrationLabel'>Current calibration: N/A</label></td>";
 
@@ -86,12 +88,13 @@ class DeviceManager extends State {
             state.saveAddDevice();
         };
         this.getElementInsideContainer(this.getID(), "detectDevice").onclick = function() {
-            state.sendRequest("POST", "bash-script",
+            state.sendRequest("POST", "script",
                 "/home/pi/project/sensor/detect_device.sh " + document.getElementById("selectBus").value);
         };
         this.getElementInsideContainer(this.getID(), "calibrateDevice").onclick = function () {
-            // TODO: Add device calibration
-            state.sendRequest("POST", "bash-script", "");
+            state.sendRequest("POST", "script", "/home/pi/project/sensor/python_executor.sh " +
+                "\"/home/pi/project/sensor/calibrate_device.py " + document.getElementById("selectBus").value +
+                " " + document.getElementById("selectType").value + "\"");
         };
 
         if (this.isEditing) {
@@ -100,6 +103,10 @@ class DeviceManager extends State {
                 state.requestStateChange("admin");
             };
             this.getElementInsideContainer(this.getID(), "selectType").value = this.adminState.editingDevice.getType();
+            this.getElementInsideContainer(this.getID(), "selectBus").value = this.adminState.editingDevice.getBus();
+            this.sendRequest("GET", "fileCheck:/home/pi/project/sensor/sensor_data/"
+                + this.adminState.editingDevice.getBus() + ".cal", "");
+            this.getElementInsideContainer(this.getID(), "thresholdInput").value = this.adminState.editingDevice.getThreshold();
         }
 
     }
@@ -110,14 +117,24 @@ class DeviceManager extends State {
             document.getElementById("detectLabel").innerText = "Device detected:" + scriptResponse;
             if (scriptResponse === "false") document.getElementById("detectLabel").style = "color: red;";
             else document.getElementById("detectLabel").style = "color: green;";
+        } else if (http_text_exchange.includes("calibrate_device")) {
+            let scriptResponse = http_text_exchange.split(":")[2];
+            if (scriptResponse === "true") document.getElementById("calibrationLabel").innerHTML = "Calibration status: complete";
+            else document.getElementById("calibrationLabel").innerHTML = "Calibration status: incomplete";
+        } else if (http_text_exchange.includes(".cal")) {
+            console.log("Calibration exist check:" + http_text_exchange);
+            let response = http_text_exchange.split(":")[1];
+            if (response === "true") document.getElementById("calibrationLabel").innerHTML = "Calibration status: complete";
+            else document.getElementById("calibrationLabel").innerHTML = "Calibration status: incomplete";
         }
     }
 
     saveAddDevice() {
         let selectBus = document.getElementById("selectBus");
         let selectType = document.getElementById("selectType");
+        let threshold = document.getElementById("thresholdInput");
 
-        let device = new Device(selectBus.value, selectType.value, false);
+        let device = new Device(selectBus.value, selectType.value, threshold.value);
 
         if (this.isEditing) this.adminState.updateDevice(device);
         else this.adminState.addDevice(device);

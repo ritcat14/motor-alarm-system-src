@@ -8,6 +8,7 @@ class Admin extends State {
         this.devices = [];
         this.deviceTypes = ["accelerometer", "gyroscope", "temperature"];
         this.schedules = [];
+        this.camera_on = false;
     }
 
     init() {
@@ -34,7 +35,10 @@ class Admin extends State {
             "                        </label></td></tr>" +
             "            </table>" +
             "            <label id='passMessage'></label><br>" +
-            "            <input type=\"submit\" id=\"passbutton\" value=\"SUBMIT\" class=\"inputButton\"></td>" +
+            "            <input type=\"submit\" id=\"passbutton\" value=\"SUBMIT\" class=\"inputButton\"><br><br><br>" +
+            "            <label>Phone Number: </label><input id='phoneNumber' value=\"\" ><br><br>" +
+            "            <button id='savePhone'>SAVE</button><br><br><br>" +
+            "            <button id='cameraToggle'>CAMERA STREAM</button></td>" +
             "        </div>" +
             "    </td>\n" +
             "    <td class='adminTableRow'><div id='devicesDiv'></div><button id='addDeviceButton' class='passbutton'>ADD</button></td>\n " +
@@ -48,11 +52,27 @@ class Admin extends State {
         };
 
         this.getElementInsideContainer(this.getID(), "addDeviceButton").onclick = function () {
-            admin.requestStateChange("addDevice")
+            admin.requestStateChange("addDevice");
         };
         this.getElementInsideContainer(this.getID(), "addSchedule").onclick = function () {
             admin.requestStateChange("addSchedule");
         }
+        this.getElementInsideContainer(this.getID(), "savePhone").onclick = function () {
+            admin.config.modifyAttribute("phone", admin.getElementInsideContainer(admin.getID(), "phoneNumber").value);
+        }
+        this.getElementInsideContainer(this.getID(), "phoneNumber").value = this.config.getAttributeData("phone");
+
+        this.getElementInsideContainer(this.getID(), "cameraToggle").onclick = function () {
+            if (!admin.camera_on) {
+                admin.sendRequest("POST", "script", "/home/pi/project/camera/start_camera.sh");
+                window.open("http://10.0.0.6:8500/web/stream.vlc");
+                admin.camera_on = true;
+            } else {
+                admin.sendRequest("POST", "script", "/home/pi/project/camera/stop_camera.sh");
+                admin.camera_on = false;
+            }
+        }
+
         this.update();
     }
 
@@ -80,7 +100,7 @@ class Admin extends State {
             "            <tr>" +
             "                <th>Bus</th>" +
             "                <th>Type</th>" +
-            "                <th>Active</th>" +
+            "                <th>Threshold</th>" +
             "                <th>Action</th>" +
             "            </tr>";
 
@@ -95,15 +115,15 @@ class Admin extends State {
                 if (separatedData === "") break;
                 let bus = separatedData[0];
                 let type = separatedData[1];
-                let active = separatedData[2];
+                let threshold = separatedData[2];
 
-                this.devices[i] = new Device(bus, type, active);
+                this.devices[i] = new Device(bus, type, threshold);
 
                 devicesInnerHTML = devicesInnerHTML +
                     "<tr>" +
                     "   <td>" + bus + "</td>" +
                     "   <td>" + type + "</td>" +
-                    "   <td>" + active + "</td>" +
+                    "   <td>" + threshold + "</td>" +
                     "   <td><button id='editDevice" + bus + "'>EDIT</button></td>" +
                     "</tr>";
             }
